@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const tempMovieData = [
     {
@@ -190,9 +190,53 @@ function WatchedMovie({ movie }) {
     );
 }
 
+function Loader() {
+    return <p className='loader'>Loading...</p>;
+}
+
+function ErrorMessage({ message }) {
+    return (
+        <p className='error'>
+            <span>⛔️</span> {message}
+        </p>
+    );
+}
+
+const KEY = "";
+
 export default function App() {
-    const [movies, setMovies] = useState(tempMovieData);
-    const [watched, setWatched] = useState(tempWatchedData);
+    const [movies, setMovies] = useState([]);
+    const [watched, setWatched] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+    const query = "marvel";
+
+    useEffect(function () {
+        async function fetchMovies() {
+            try {
+                setIsLoading(true);
+                const res = await fetch(
+                    `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+                );
+                if (!res.ok)
+                    throw new Error(
+                        "Something went wrong with fetching movies",
+                    );
+
+                const data = await res.json();
+                if (data.Response === "False")
+                    throw new Error("Movie not found");
+
+                setMovies(data.Search);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchMovies();
+    }, []);
+
     return (
         <>
             <Navbar>
@@ -201,7 +245,9 @@ export default function App() {
             </Navbar>
             <Main>
                 <Box>
-                    <MovieList movies={movies} />
+                    {isLoading && <Loader />}
+                    {!isLoading && !error && <MovieList movies={movies} />}
+                    {error && <ErrorMessage message={error} />}
                 </Box>
                 <Box>
                     <WatchedSummary watched={watched} />
